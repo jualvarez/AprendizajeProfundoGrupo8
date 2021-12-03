@@ -23,10 +23,12 @@ class CNNClassifier(pl.LightningModule):
                  filter_sizes=[3, 4, 5],
                  num_filters=[100, 100, 100],
                  num_classes=632,
-                 dropout=0.5
+                 dropout=0.5,
+                 batch_size=300
                 ):
         super().__init__()
 
+        self.batch_size = batch_size
         self.vector_size = vector_size
 
         self.conv1d_list = nn.ModuleList([
@@ -92,7 +94,7 @@ class CNNClassifier(pl.LightningModule):
     def train_dataloader(self):
         return DataLoader(
             MeliDataset("reduced_train_df.pkl"),
-            batch_size=300,
+            batch_size=self.batch_size,
             shuffle=True,
             num_workers=12
         )
@@ -100,7 +102,7 @@ class CNNClassifier(pl.LightningModule):
     def val_dataloader(self):
         return DataLoader(
             MeliDataset("spanish.validation.pkl"),
-            batch_size=300,
+            batch_size=self.batch_size,
             shuffle=False,
             num_workers=12,
             pin_memory=True
@@ -117,11 +119,17 @@ class CNNClassifier(pl.LightningModule):
 def set_params(params):
     _params = params
 
-def train():
+
+def train(args):
     torch.cuda.set_device(0)
-    model = CNNClassifier()
+    batch_size = args.batch_size
+    vector_size = args.vector_size
+    dropout = args.dropout
+    epochs = args.epochs
+
+    model = CNNClassifier(vector_size=vector_size, dropout=dropout, batch_size=batch_size)
     early_stopping = EarlyStopping('t n_loss')
-    trainer = pl.Trainer(max_epochs=4, progress_bar_refresh_rate=20, gpus=1, logger=mlf_logger, callbacks=[early_stopping], default_root_dir=BASE_PATH + "mlp_flat/")
+    trainer = pl.Trainer(max_epochs=epochs, progress_bar_refresh_rate=20, gpus=1, logger=mlf_logger, callbacks=[early_stopping], default_root_dir=BASE_PATH + "mlp_flat/")
     trainer.fit(model)
     trainer.test()
     return model
@@ -131,12 +139,17 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Train or eval model")
     parser.add_argument("--eval", dest="eval", type=bool, nargs='+', default=False)
+
+    parser.add_argument("--epochs", dest="epochs", type=int, nargs='+', default=4)
+    parser.add_argument("--vector_size", dest="vector_size", type=int, nargs='+', default=50)
+    parser.add_argument("--batch_size", dest="batch_size", type=int, nargs='+', default=300)
+    parser.add_argument("--dropout", dest="dropout", type=float, nargs='+', default=0.5)
     args = parser.parse_args()
 
     MODEL_PATH = BASE_PATH + "cnn/cnn_model.torch"
     
     if not args.eval:
-        model = train()
+        model = train(args)
         torch.save(model, MODEL_PATH)
     
     else:

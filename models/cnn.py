@@ -111,7 +111,7 @@ class CNNClassifier(pl.LightningModule):
     def test_dataloader(self):
         return DataLoader(
             MeliDataset("spanish.test.pkl"),
-            batch_size=300,
+            batch_size=self.batch_size,
             shuffle=False,
             num_workers=12
         )

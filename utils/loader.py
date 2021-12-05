@@ -7,8 +7,9 @@ from torch.nn import functional as F
 import torch
 from tqdm import tqdm
 import numpy as np
+from sklearn.utils import compute_class_weight
 
-from utils.params import BASE_PATH, VECTOR_SIZE
+from utils.params import BASE_PATH, NUM_CLASSES, VECTOR_SIZE
 
 import pickle
 
@@ -34,6 +35,22 @@ def dataset_loader(path, output="cached_dataframe.pkl", limit=None, categories=F
     dataframe = pd.DataFrame(rows)
     dataframe.to_pickle(BASE_PATH + output)
     return dataframe
+
+
+def get_categories_weight(train_file="reduced_train_df.pkl"):
+    with open(BASE_PATH + train_file, "rb") as fp:
+        df = pickle.load(fp)
+
+    classes = np.unique(df["target"])
+    class_weight = compute_class_weight("balanced", classes=classes, y=df["target"])
+    weight_complete = [
+        class_weight[np.where(classes == i)[0][0]] if i in classes else 1
+        for i in range(NUM_CLASSES)
+    ]
+    tensor = torch.tensor(weight_complete)
+    with open(BASE_PATH + "class_weights.pkl", "wb") as fp:
+        pickle.dump(tensor, fp)
+    return tensor
 
 
 class TokensToTensor:

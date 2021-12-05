@@ -50,11 +50,20 @@ class CNNClassifier(pl.LightningModule):
             ]
         )
         # Fully-connected layer and Dropout
-        self.fc = nn.Linear(np.sum(num_filters), num_classes)
+        self.fc_1 = nn.Linear(np.sum(num_filters), int(np.sum(num_filters) / 2))
+        self.fc_2 = nn.Linear(int(np.sum(num_filters) / 2), num_classes)
         self.dropout = nn.Dropout(p=dropout)
 
         self.accuracy = torchmetrics.Accuracy()
         self.recall = torchmetrics.Recall(num_classes=num_classes, average="macro")
+
+        # load class weights
+        try:
+            with open(BASE_PATH + "class_weights.pkl", "rb") as fp:
+                self._weights = pickle.load(fp)
+                self._weights = self._weights.float().to("cuda:0")
+        except Exception:
+            self._weights = None
 
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -86,10 +95,11 @@ class CNNClassifier(pl.LightningModule):
 
         # Concatenate x_pool_list to feed the fully connected layer.
         # Output shape: (b, sum(num_filters))
-        x_fc = torch.cat([x_pool.squeeze(dim=2) for x_pool in x_pool_list], dim=1)
+        x_fc_1 = torch.cat([x_pool.squeeze(dim=2) for x_pool in x_pool_list], dim=1)
 
         # Compute logits. Output shape: (b, n_classes)
-        logits = self.fc(self.dropout(x_fc))
+        x_fc_2 = self.fc_1(self.dropout(x_fc_1))
+        logits = self.fc_2(self.dropout(x_fc_2))
 
         return logits
 
@@ -106,7 +116,7 @@ class CNNClassifier(pl.LightningModule):
     def test_val_step(self, batch, log_prefix):
         x, y = batch
         preds = self(x)
-        loss = F.cross_entropy(preds, y)
+        loss = F.cross_entropy(preds, y, weight=self._weights)
         self.log(f"{log_prefix}_loss", loss)
         self.log(f"{log_prefix}_accuracy", self.accuracy(preds, y))
         self.log(f"{log_prefix}_macro_recall", self.recall(preds, y))

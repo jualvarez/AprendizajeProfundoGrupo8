@@ -12,6 +12,7 @@ from utils.params import VECTOR_SIZE
 
 _params = {}
 
+
 class MeliNaive(pl.LightningModule):
     def __init__(self) -> None:
         super().__init__()
@@ -28,14 +29,13 @@ class MeliNaive(pl.LightningModule):
         self.batchnorm1 = nn.BatchNorm1d(100)
         self.batchnorm2 = nn.BatchNorm1d(100)
         # self.batchnorm3 = nn.BatchNorm1d(64)
-    
+
     def forward(self, x):
         # x = self.embeddings(x)
         # x = torch.mean(x, dim=1)
         x = self.hidden1(x)
         x = self.batchnorm1(x)
         x = self.relu(x)
-
 
         x = self.hidden2(x)
         x = self.batchnorm2(x)
@@ -53,7 +53,7 @@ class MeliNaive(pl.LightningModule):
         # x = F.relu(self.hidden2(x))
         # x = torch.sigmoid(self.output(x))
         return x
-    
+
     def training_step(self, batch, batch_nb):
         x, y = batch
         loss = F.cross_entropy(self(x), y)
@@ -61,21 +61,17 @@ class MeliNaive(pl.LightningModule):
         self.log("t n_loss", loss, on_epoch=True)
         # self.log_metrics("accuracy")
         return loss
-    
+
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=0.02)
-    
+
     def train_dataloader(self):
-        return DataLoader(
-            MeliDataset(),
-            batch_size=4,
-            shuffle=True,
-            num_workers=12
-        )
+        return DataLoader(MeliDataset(), batch_size=4, shuffle=True, num_workers=12)
 
 
 def set_params(params):
     _params = params
+
 
 def train():
     torch.cuda.set_device(0)

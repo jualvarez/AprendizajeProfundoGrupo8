@@ -11,7 +11,11 @@ def train_embeddings(corpus, extra_fasttext_kwargs=None):
         extra_fasttext_kwargs = {}
 
     fasttext_kwargs = {
-        "min_count": 5, "vector_size": VECTOR_SIZE, "workers": 4, "window": 8, "sg": 1
+        "min_count": 5,
+        "vector_size": VECTOR_SIZE,
+        "workers": 4,
+        "window": 8,
+        "sg": 1,
     }
     print("Training...")
     fasttext_kwargs.update(extra_fasttext_kwargs)

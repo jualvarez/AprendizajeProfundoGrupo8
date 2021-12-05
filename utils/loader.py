@@ -12,8 +12,9 @@ from utils.params import BASE_PATH, VECTOR_SIZE
 
 import pickle
 
+
 def dataset_loader(path, output="cached_dataframe.pkl", limit=None, categories=False):
-    
+
     row_count = 1
     rows = []
     if categories:
@@ -34,12 +35,14 @@ def dataset_loader(path, output="cached_dataframe.pkl", limit=None, categories=F
     dataframe.to_pickle(BASE_PATH + output)
     return dataframe
 
+
 class TokensToTensor:
     embeddings = None
 
     def __init__(self) -> None:
         print("Loading embeddings")
         from utils.embeddings import load_embeddings
+
         self.embedding = load_embeddings()
         print("Embeddings loaded")
 
@@ -50,7 +53,9 @@ class TokensToTensor:
         data = F.pad(tensor, (0, 0, 0, 50 - tensor.size(0)))
         return data
 
+
 token_title_to_tensor = TokensToTensor()
+
 
 class MeliDataset(Dataset):
     def __init__(self, dataset_file):
@@ -58,10 +63,10 @@ class MeliDataset(Dataset):
             self.dataset = pd.read_pickle(BASE_PATH + dataset_file)
         except FileNotFoundError:
             self.dataset = pd.DataFrame(["sadf"])
-    
+
     def __len__(self):
         return self.dataset.shape[0]
-    
+
     def __getitem__(self, item):
         item = self.dataset.iloc[item]
         data = token_title_to_tensor(item["tokenized_title"])
@@ -76,10 +81,10 @@ class MeliFlattenDataset(Dataset):
             self.dataset = pd.read_pickle(BASE_PATH + dataset_file)
         except FileNotFoundError:
             self.dataset = pd.DataFrame(["sadf"])
-    
+
     def __len__(self):
         return self.dataset.shape[0]
-    
+
     def __getitem__(self, item):
         item = self.dataset.iloc[item]
         data = token_title_to_tensor(item["tokenized_title"])
@@ -106,12 +111,13 @@ class PadSequences:
         else:
             max_length = max(self.min_length, max(seq_lengths))
 
-        data = [d[:l] + [self.pad_value] * (max_length - l)
-                for d, l in zip(data, seq_lengths)]
+        data = [
+            d[:l] + [self.pad_value] * (max_length - l)
+            for d, l in zip(data, seq_lengths)
+        ]
 
         print(torch.LongTensor(data), torch.LongTensor(target))
         return torch.LongTensor(data), torch.LongTensor(target)
-        
 
 
 class MeliDataModule(pl.LightningDataModule):
@@ -137,19 +143,30 @@ class MeliDataModule(pl.LightningDataModule):
         return DataLoader(self.mnist_test, batch_size=self.batch_size, num_workers=12)
 
     def predict_dataloader(self):
-        return DataLoader(self.mnist_predict, batch_size=self.batch_size, num_workers=12)
+        return DataLoader(
+            self.mnist_predict, batch_size=self.batch_size, num_workers=12
+        )
 
     def teardown(self, stage: Optional[str] = None):
         # Used to clean-up when the run is finished
         pass
 
+
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser(description="Load dataset and cache in disk")
     parser.add_argument("input", type=str)
     parser.add_argument("output", type=str)
-    parser.add_argument("limit", type=int, nargs='?', default=None)
-    parser.add_argument("--categories", dest="categories", type=bool, nargs='?', default=False)
+    parser.add_argument("limit", type=int, nargs="?", default=None)
+    parser.add_argument(
+        "--categories", dest="categories", type=bool, nargs="?", default=False
+    )
     args = parser.parse_args()
     print("Loading data...")
-    dataset_loader(BASE_PATH + args.input, output=args.output, limit=args.limit, categories=args.categories)
+    dataset_loader(
+        BASE_PATH + args.input,
+        output=args.output,
+        limit=args.limit,
+        categories=args.categories,
+    )
